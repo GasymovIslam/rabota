@@ -1,0 +1,107 @@
+CREATE TABLE dbo.roles (
+    role_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    name NVARCHAR(50) NOT NULL UNIQUE
+);
+
+
+CREATE TABLE dbo.users (
+    user_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    role_id BIGINT FOREIGN KEY REFERENCES dbo.roles(role_id),
+    full_name NVARCHAR(200) NOT NULL,
+    email NVARCHAR(200) UNIQUE,
+    phone NVARCHAR(30),
+    password_hash NVARCHAR(256),
+    is_active BIT DEFAULT 1,
+    created_at DATETIME2 DEFAULT GETDATE()
+);
+
+
+CREATE TABLE dbo.employees (
+    employee_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    user_id BIGINT UNIQUE FOREIGN KEY REFERENCES dbo.users(user_id),
+    position NVARCHAR(100),
+    department NVARCHAR(100),
+    license_number NVARCHAR(100), -- для водителей
+    license_category NVARCHAR(20),
+    hire_date DATE
+);
+
+
+CREATE TABLE dbo.clients (
+    client_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    user_id BIGINT UNIQUE FOREIGN KEY REFERENCES dbo.users(user_id),
+    company_name NVARCHAR(200) NOT NULL,
+    contact_name NVARCHAR(200),
+    phone NVARCHAR(30),
+    billing_address NVARCHAR(MAX)
+);
+
+
+
+CREATE TABLE dbo.vehicles (
+    vehicle_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    reg_number NVARCHAR(30) UNIQUE NOT NULL,
+    make NVARCHAR(100),
+    model NVARCHAR(100),
+    capacity_kg DECIMAL(12,2),
+    capacity_m3 DECIMAL(12,3),
+    status NVARCHAR(50) CHECK (status IN ('available', 'assigned', 'maintenance', 'broken')),
+    current_location NVARCHAR(100) -- или координаты
+);
+
+
+CREATE TABLE dbo.orders (
+    order_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    order_number NVARCHAR(100) UNIQUE,
+    client_id BIGINT FOREIGN KEY REFERENCES dbo.clients(client_id),
+    created_by BIGINT FOREIGN KEY REFERENCES dbo.users(user_id), -- логист
+    cargo_description NVARCHAR(MAX),
+    weight_kg DECIMAL(12,3),
+    volume_m3 DECIMAL(12,3),
+    cost DECIMAL(14,2),
+    status NVARCHAR(50),
+    pickup_address NVARCHAR(MAX),
+    delivery_address NVARCHAR(MAX),
+    created_at DATETIME2 DEFAULT GETDATE()
+);
+
+
+
+CREATE TABLE dbo.deliveries (
+    delivery_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    order_id BIGINT UNIQUE FOREIGN KEY REFERENCES dbo.orders(order_id),
+    vehicle_id BIGINT FOREIGN KEY REFERENCES dbo.vehicles(vehicle_id),
+    driver_id BIGINT FOREIGN KEY REFERENCES dbo.employees(employee_id),
+    planned_start DATETIME2,
+    planned_end DATETIME2,
+    actual_start DATETIME2,
+    actual_end DATETIME2,
+    route_data NVARCHAR(MAX),
+    status NVARCHAR(50)
+);
+
+CREATE TABLE dbo.tracking (
+    track_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    vehicle_id BIGINT FOREIGN KEY REFERENCES dbo.vehicles(vehicle_id),
+    latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
+    timestamp DATETIME2 DEFAULT GETDATE()
+);
+
+CREATE TABLE dbo.maintenance (
+    maintenance_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    vehicle_id BIGINT FOREIGN KEY REFERENCES dbo.vehicles(vehicle_id),
+    assigned_worker_id BIGINT FOREIGN KEY REFERENCES dbo.employees(employee_id),
+    type NVARCHAR(50),
+    scheduled_date DATE,
+    status NVARCHAR(50),
+    cost DECIMAL(14,2)
+);
+
+CREATE TABLE dbo.payments (
+    payment_id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    order_id BIGINT FOREIGN KEY REFERENCES dbo.orders(order_id),
+    amount DECIMAL(14,2),
+    payment_date DATETIME2 DEFAULT GETDATE(),
+    status NVARCHAR(50)
+);
